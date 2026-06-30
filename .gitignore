@@ -1,0 +1,7 @@
+.env
+__pycache__/
+*.pyc
+*.pyo
+sergeant/sergeant.db
+logs/
+*.log
