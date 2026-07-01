@@ -106,6 +106,7 @@ _warned_title        = None
 _countdown_shown     = False
 _infraction_count    = 0
 _countdown_persistent = False   # countdown de la 4ta infracción (pausa/reanuda, nunca se resetea)
+_last_cam_present     = "unset"  # trackea cambios de presencia para loguear solo transiciones
 
 
 def _do_close(window):
@@ -273,11 +274,12 @@ def _refresh_metrics():
 
 
 def _start_monitoring():
+    global _last_cam_present
     launch_dashboard(lambda: dict(state), _apply_goal)
     threading.Thread(target=_refresh_metrics, daemon=True).start()
     threading.Thread(target=_extract_and_set_keywords, args=(state["goal"],), daemon=True).start()
     if WEBCAM_ENABLED:
-        webcam.start()
+        threading.Thread(target=webcam.start, daemon=True).start()
     print(f"[SERGEANT] objetivo: {state['goal']}")
     print(f"[SERGEANT] monitoreando cada {POLL_INTERVAL_SECONDS}s\n")
     _consecutive_errors = 0
@@ -306,12 +308,18 @@ def _start_monitoring():
                     cam_present, cam_reason = webcam.get_presence()
                     state["webcam_present"] = cam_present
                     state["webcam_reason"]  = cam_reason
+                    if cam_present != _last_cam_present:
+                        print(f"[WEBCAM] presente={cam_present} razon='{cam_reason}'")
+                        _last_cam_present = cam_present
                     if cam_present is False and status != Status.DISTRACTION:
                         status = Status.DISTRACTION
                         reason = "AFK — sin presencia detectada"
                 else:
                     state["webcam_present"] = None
                     state["webcam_reason"]  = "inactivo"
+                    if _last_cam_present != "unset" and _last_cam_present is not None:
+                        print("[WEBCAM] is_running()=False — override AFK deshabilitado")
+                        _last_cam_present = None
 
                 _update_state(window, status, reason)
                 print(f"[{status.value:<11}] {window.title[:60]:<60}  |  {reason}")
