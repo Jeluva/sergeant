@@ -71,15 +71,18 @@ NEUTRAL_PLATFORM_HOMEPAGES = frozenset({
 # Procesos del sistema/shell de Windows: nunca se evalúan como distracción ni se cierran.
 # explorer.exe en particular ES el shell (taskbar + escritorio) — terminarlo no cierra
 # "una ventana", mata el shell entero.
+# En Linux, el análogo es el shell del entorno de escritorio (GNOME/KDE/XFCE/etc.).
 NEUTRAL_PROCESSES = {
     "explorer.exe", "taskmgr.exe", "searchhost.exe", "searchapp.exe",
     "shellexperiencehost.exe", "textinputhost.exe", "systemsettings.exe",
     "applicationframehost.exe", "dwm.exe",
+    "gnome-shell", "plasmashell", "xfwm4", "kwin_x11", "kwin_wayland", "mutter",
 }
 
 DISTRACTION_PROCESSES = [
     "steam.exe", "epicgameslauncher.exe",
     "leagueclient.exe", "valorant.exe",
+    "steam",
 ]
 
 DISTRACTION_WINDOW_KEYWORDS = [
@@ -112,9 +115,19 @@ TWITTER_ENABLED = False
 PRODUCTIVE_PROCESSES = {
     "code.exe", "windowsterminal.exe", "python3.12.exe", "python.exe",
     "pycharm64.exe", "notepad++.exe", "obsidian.exe", "notion.exe",
+    # equivalentes Linux (psutil no agrega ".exe" fuera de Windows)
+    "code", "code-oss", "codium", "gnome-terminal-server", "konsole", "xterm",
+    "alacritty", "kitty", "python3", "python", "pycharm64", "pycharm",
+    "obsidian", "notion-app",
 }
 
-BROWSER_PROCESSES = {"chrome.exe", "firefox.exe", "msedge.exe", "opera.exe", "brave.exe"}
+BROWSER_PROCESSES = {
+    "chrome.exe", "firefox.exe", "msedge.exe", "opera.exe", "brave.exe",
+    # equivalentes Linux
+    "chrome", "google-chrome", "google-chrome-stable", "chromium", "chromium-browser",
+    "firefox", "firefox-esr", "microsoft-edge", "microsoft-edge-stable", "opera", "brave",
+    "brave-browser",
+}
 
 DB_PATH = _os.path.join(_os.path.dirname(__file__), "sergeant.db")
 POLL_INTERVAL_SECONDS = 2 if DEMO_MODE else 5

@@ -1,7 +1,16 @@
+import sys
 import tkinter as tk
 import threading
 import random
-import winsound
+
+if sys.platform == "win32":
+    import winsound
+
+    def _beep(freq, dur_ms):
+        winsound.Beep(freq, dur_ms)
+else:
+    def _beep(freq, dur_ms):
+        print("\a", end="", flush=True)
 
 _root = None   # dashboard root (set_root() called from dashboard.py)
 _countdown_window  = None
@@ -181,7 +190,7 @@ def _create_countdown(seconds: int, distraction: str, on_close_cb=None):
 
         if remaining[0] <= 5:
             threading.Thread(
-                target=lambda: winsound.Beep(880 + (5 - remaining[0]) * 40, 80),
+                target=lambda: _beep(880 + (5 - remaining[0]) * 40, 80),
                 daemon=True
             ).start()
 

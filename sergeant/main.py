@@ -291,7 +291,7 @@ def _start_monitoring():
                 _null_window_count = 0
 
                 is_sergeant_self = (
-                    window.process_name.lower() in ("python3.12.exe", "python.exe")
+                    window.process_name.lower() in ("python3.12.exe", "python.exe", "python3", "python")
                     and (
                         "sergeant" in window.title.lower()
                         or window.title.lower() in ("tk", "")   # ventanas Tkinter internas (toast, etc.)

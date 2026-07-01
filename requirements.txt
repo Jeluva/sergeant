@@ -1,5 +1,8 @@
-pygetwindow
-pywin32
 psutil
 tweepy
 schedule
+groq
+pywin32; sys_platform == "win32"
+pynput; sys_platform != "win32"
+python-xlib; sys_platform != "win32"
+ewmh; sys_platform != "win32"
