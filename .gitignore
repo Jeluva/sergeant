@@ -5,3 +5,4 @@ __pycache__/
 sergeant/sergeant.db
 logs/
 *.log
+.venv

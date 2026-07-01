@@ -19,20 +19,28 @@ App de productividad estilo **Black Mirror** construida para un ANTIhackaton. Co
 ## Stack
 
 - Python 3.12 + tkinter
-- pywin32 — detección de ventanas, envío de teclas
+- Detección de ventanas y envío de teclas: `pywin32` en Windows, `ewmh` + `python-xlib` + `pynput` en Linux
 - psutil — info de procesos
 - SQLite — time tracking local
 - Groq API (`llama-3.1-8b-instant`) — clasificador semántico, ~100ms, gratuito
 - tweepy — Twitter/X (mock por default)
 - opencv-python + mediapipe — detección de presencia por webcam (opcional)
-- Windows 10+
+- Windows 10+ o Linux con sesión **X11** (Wayland no soporta el control de foco/teclas que usa el enforcer)
 
 ---
 
 ## Instalación
 
 ```bash
-pip install pywin32 psutil tweepy groq opencv-python mediapipe
+pip install -r requirements.txt groq opencv-python mediapipe
+```
+
+`requirements.txt` ya resuelve las dependencias correctas según el SO (`pywin32` solo en Windows, `pynput`/`python-xlib`/`ewmh` solo en Linux/Mac).
+
+En Linux, `tkinter` es un paquete de sistema, no se instala con pip:
+
+```bash
+sudo apt install python3-tk   # Debian/Ubuntu/Mint
 ```
 
 Crear un archivo `.env` en la raíz del proyecto:
@@ -61,10 +69,17 @@ Si no tenés `GROQ_API_KEY`, la app igual funciona con fallback a keywords.
 ## Uso
 
 ```bat
-# Desde la raíz del proyecto:
-DEMO.bat                              # launcher con menú
+:: Windows — desde la raíz del proyecto:
+DEMO.bat
 python sergeant\main.py               # arranque normal (pide contrato)
 python sergeant\main.py --skip-contract  # saltea el contrato (testing)
+```
+
+```bash
+# Linux — desde la raíz del proyecto:
+./DEMO.sh
+python3 sergeant/main.py                 # arranque normal (pide contrato)
+python3 sergeant/main.py --skip-contract  # saltea el contrato (testing)
 ```
 
 **DEMO_MODE = True** — todos los timers están acelerados para presentaciones (grace period 8s, countdown 20s).
@@ -77,8 +92,8 @@ python sergeant\main.py --skip-contract  # saltea el contrato (testing)
 
 Cada 2 segundos se detecta la ventana activa. El clasificador usa este orden de prioridad:
 
-1. Proceso en lista negra (`discord.exe`, `steam.exe`, etc.) → **DISTRACTION** inmediata
-2. Proceso en lista blanca (`code.exe`, `pycharm64.exe`, etc.) → **PRODUCTIVE** inmediata
+1. Proceso en lista negra (`discord.exe`/`discord`, `steam.exe`/`steam`, etc.) → **DISTRACTION** inmediata
+2. Proceso en lista blanca (`code.exe`/`code`, `pycharm64.exe`/`pycharm`, etc.) → **PRODUCTIVE** inmediata
 3. Nueva pestaña / Google SERP → **UNKNOWN** (sin enforcement, es tránsito)
 4. **LLM Groq** — clasifica semánticamente con tu objetivo como contexto
 5. Fallback a keywords si el LLM falla o da timeout
@@ -127,9 +142,9 @@ Cuatro tabs:
 sergeant/
 ├── main.py          # loop principal, máquina de estados
 ├── config.py        # parámetros y API keys
-├── monitor.py       # get_active_window()
+├── monitor.py       # get_active_window() — pywin32 (Windows) / ewmh+Xlib (Linux)
 ├── classifier.py    # LLM + keyword fallback
-├── enforcer.py      # warn, close, countdown, dismiss
+├── enforcer.py      # warn, close, countdown, dismiss — pywin32 (Windows) / ewmh+pynput (Linux)
 ├── tracker.py       # time tracking por sesión
 ├── db.py            # SQLite
 ├── social.py        # tweet_distraction()
