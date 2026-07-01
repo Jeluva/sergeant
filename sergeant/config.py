@@ -68,9 +68,18 @@ NEUTRAL_PLATFORM_HOMEPAGES = frozenset({
     "twitter - google chrome",
 })
 
+# Procesos del sistema/shell de Windows: nunca se evalúan como distracción ni se cierran.
+# explorer.exe en particular ES el shell (taskbar + escritorio) — terminarlo no cierra
+# "una ventana", mata el shell entero.
+NEUTRAL_PROCESSES = {
+    "explorer.exe", "taskmgr.exe", "searchhost.exe", "searchapp.exe",
+    "shellexperiencehost.exe", "textinputhost.exe", "systemsettings.exe",
+    "applicationframehost.exe", "dwm.exe",
+}
+
 DISTRACTION_PROCESSES = [
-    "discord.exe", "steam.exe", "epicgameslauncher.exe",
-    "leagueclient.exe", "valorant.exe", "spotify.exe",
+    "steam.exe", "epicgameslauncher.exe",
+    "leagueclient.exe", "valorant.exe",
 ]
 
 DISTRACTION_WINDOW_KEYWORDS = [

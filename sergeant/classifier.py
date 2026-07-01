@@ -10,6 +10,7 @@ from config import (
     PRODUCTIVE_WINDOW_KEYWORDS,
     PRODUCTIVE_PROCESSES,
     BROWSER_PROCESSES,
+    NEUTRAL_PROCESSES,
 )
 
 _llm_cache: dict = {}
@@ -116,9 +117,9 @@ def analyze_goal(goal: str) -> dict | None:
 
 def _llm_verify(title: str, process: str, goal: str) -> tuple:
     """
-    Verificación binaria con LLM: dado el objetivo del usuario, ¿esta ventana es
-    productiva o una distracción? Solo se llama cuando el fast-path de keywords
-    no pudo confirmar que es productivo.
+    Verificación con LLM: dado el objetivo del usuario, ¿esta ventana es
+    productiva, una distracción, o no hay contenido real que juzgar? Solo se
+    llama cuando el fast-path de keywords no pudo confirmar que es productivo.
 
     Siempre retorna (Status, razón) — si el LLM falla, asume DISTRACTION.
     Cache por (título, objetivo): cada título único se llama una sola vez.
@@ -131,24 +132,32 @@ def _llm_verify(title: str, process: str, goal: str) -> tuple:
         f'You are a strict focus enforcement assistant. Answer with ONE word only.\n\n'
         f'User mission: "{goal}"\n'
         f'Active window: "{title}" (process: {process})\n\n'
-        f'Is this window PRODUCTIVE or a DISTRACTION for the user\'s mission?\n\n'
+        f'Classify this window as PRODUCTIVE, DISTRACTION, or UNKNOWN for the user\'s mission.\n\n'
         f'Rules:\n'
+        f'- UNKNOWN: the title is NOT real content the user chose to engage with — it is a '
+        f'transient system/browser notification, toast, confirmation message, save/print/permission '
+        f'dialog, loading state, or an empty/near-empty title. Examples: "Se agregó a Favoritos", '
+        f'"Guardando...", "Descarga completa", "Abrir con...", "". Check UNKNOWN FIRST, before '
+        f'judging relevance — these have nothing to evaluate, so never call them a DISTRACTION.\n'
         f'- PRODUCTIVE: tutorials, documentation, tools, code editors, or platforms where the '
         f'specific content visible in the title is CLEARLY and DIRECTLY related to the mission. '
         f'YouTube/Reddit count as PRODUCTIVE ONLY if the specific video/post title shows a '
         f'direct, obvious connection to the mission topic — not a vague or indirect one.\n'
         f'- DISTRACTION: entertainment, gaming, social media, shopping, piracy, social events, '
-        f'unrelated news, finance apps, or any page where the title does not clearly connect '
-        f'to the mission. Generic titles ("Home", "Dashboard", "Inicio") = DISTRACTION.\n'
-        f'- Default to DISTRACTION when the connection is ambiguous, weak, or unclear.\n\n'
-        f'Reply with exactly one word: PRODUCTIVE or DISTRACTION.'
+        f'unrelated news, finance apps, or any page with REAL content where the title does not '
+        f'clearly connect to the mission. Generic content titles ("Home", "Dashboard", "Inicio") '
+        f'= DISTRACTION.\n'
+        f'- Among PRODUCTIVE vs DISTRACTION, default to DISTRACTION when the connection is '
+        f'ambiguous, weak, or unclear. This rule does NOT apply to UNKNOWN — that is decided '
+        f'first, based on whether there is content at all, not on relevance.\n\n'
+        f'Reply with exactly one word: PRODUCTIVE, DISTRACTION, or UNKNOWN.'
     )
 
     try:
         resp = _get_client().chat.completions.create(
             model=GROQ_MODEL,
             messages=[{"role": "user", "content": prompt}],
-            max_tokens=5,
+            max_tokens=6,
             temperature=0,
             timeout=GROQ_TIMEOUT,
         )
@@ -157,7 +166,10 @@ def _llm_verify(title: str, process: str, goal: str) -> tuple:
         print(f"[LLM] error verificando '{title[:35]}': {e}")
         return Status.DISTRACTION, "[LLM] error — asumiendo distracción"
 
-    if "PRODUCTIVE" in word:
+    if "UNKNOWN" in word:
+        result = (Status.UNKNOWN, "[LLM] sin contenido real que evaluar")
+        print(f"[LLM] UNKNOWN (no es contenido): '{title[:50]}'")
+    elif "PRODUCTIVE" in word:
         result = (Status.PRODUCTIVE, "[LLM] productivo según la misión")
         print(f"[LLM] PRODUCTIVO: '{title[:50]}'")
     else:
@@ -233,6 +245,7 @@ def classify(window: WindowInfo, goal: str) -> tuple:
     Arquitectura de dos pasos:
 
     FAST PATH — retorna PRODUCTIVE/UNKNOWN directamente sin LLM:
+      0. NEUTRAL_PROCESSES      → UNKNOWN (proceso de sistema/shell, nunca se evalúa)
       1. DISTRACTION_PROCESSES  → DISTRACTION inmediato (sin verificar)
       2. NEUTRAL_TITLE_PATTERNS → UNKNOWN (tránsito, no enforcement)
       3. Keywords productivas (dinámicas + estáticas) → PRODUCTIVE
@@ -246,6 +259,10 @@ def classify(window: WindowInfo, goal: str) -> tuple:
     """
     title_lower   = window.title.lower()
     process_lower = window.process_name.lower()
+
+    # 0. Procesos de sistema/shell (explorer.exe, etc.) — nunca se evalúan, nunca se cierran.
+    if process_lower in NEUTRAL_PROCESSES:
+        return Status.UNKNOWN, "proceso de sistema — no se evalúa"
 
     # 1. Procesos bloqueados: Discord, Steam, Spotify — siempre DISTRACTION, sin LLM
     for proc in DISTRACTION_PROCESSES:

@@ -37,11 +37,14 @@ def _init_cam():
     try:
         mp_face   = _mp.solutions.face_detection
         _detector = mp_face.FaceDetection(model_selection=0, min_detection_confidence=0.5)
-        _cap      = _cv2.VideoCapture(0)
+        _cap      = _cv2.VideoCapture(0, _cv2.CAP_DSHOW)
         if not _cap.isOpened():
             _cap.release()
-            _cap = None
-            return False
+            _cap = _cv2.VideoCapture(0)   # fallback: backend por defecto (DSHOW no soportado)
+            if not _cap.isOpened():
+                _cap.release()
+                _cap = None
+                return False
         return True
     except Exception as exc:
         print(f"[WEBCAM] init error: {exc}")

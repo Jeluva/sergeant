@@ -678,14 +678,20 @@ def _build_config_tab(parent):
             cam_status_var.set("  INACTIVO")
             cam_status_lbl.configure(fg=G_DIM)
         else:
-            ok = _webcam_mod.start()
-            if ok:
-                cam_toggle_btn.configure(text="  DESACTIVAR  ")
-                cam_status_var.set("  iniciando...")
-                cam_status_lbl.configure(fg=G_DIM)
-            else:
-                cam_status_var.set("  ERROR: instala opencv-python y mediapipe, o verifica la cámara")
-                cam_status_lbl.configure(fg=D_RED)
+            cam_toggle_btn.configure(text="  DESACTIVAR  ")
+            cam_status_var.set("  iniciando...")
+            cam_status_lbl.configure(fg=G_DIM)
+
+            def _start_bg():
+                ok = _webcam_mod.start()
+                if not ok:
+                    def _on_fail():
+                        cam_toggle_btn.configure(text="  ACTIVAR  ")
+                        cam_status_var.set("  ERROR: instala opencv-python y mediapipe, o verifica la cámara")
+                        cam_status_lbl.configure(fg=D_RED)
+                    frame.after(0, _on_fail)
+
+            threading.Thread(target=_start_bg, daemon=True).start()
 
     cam_btn_row = tk.Frame(frame, bg=G_BG)
     cam_btn_row.pack(fill=tk.X, padx=20, pady=(0, 10))
